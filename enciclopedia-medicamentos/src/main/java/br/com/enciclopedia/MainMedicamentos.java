@@ -5,8 +5,11 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import br.com.enciclopedia.entity.Generico;
@@ -25,30 +28,43 @@ public class MainMedicamentos {
 		List<MedicamentoReferencia> medicamentosReferencia = carregarMedicamentosReferencia();
 		List<Generico> genericos = carregarGenericos();
 		List<Similar> similares = carregarSimilares();
-		int count = 0;
-		int countErro = 0;
 
-		// for (Generico generico : genericos) {
-		// boolean achou = false;
-		// for (MedicamentoReferencia medicamentoReferencia :
-		// medicamentosReferencia) {
-		// if
-		// (generico.getMedicamentoReferencia().equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento()))
-		// {
-		// achou = true;
-		// count++;
-		// medicamentoReferencia.getGenericos().add(generico);
-		// break;
-		// }
-		// }
-		//
-		// if (!achou) {
-		// countErro++;
-		// // System.out.println("Generico " + generico.getPrincipioAtivo()
-		// // + " órfão: " + generico.getMedicamentoReferencia());
-		// }
-		// }
+		mapearFormasFarmaceuticas(medicamentosReferencia, genericos);
+		agruparMedicamentos(medicamentosReferencia, genericos, similares);
+		// imprimirResultado(medicamentosReferencia);
 
+	}
+
+	private static void imprimirResultado(List<MedicamentoReferencia> medicamentosReferencia) {
+		for (MedicamentoReferencia medicamentoReferencia : medicamentosReferencia) {
+
+			// if
+			// (!formasFarmaceuticas.contains(medicamentoReferencia.getFormaFarmaceutica()))
+			// {
+			// formasFarmaceuticas.add(medicamentoReferencia.getFormaFarmaceutica());
+			// meds.add(medicamentoReferencia.getFormaFarmaceutica() + " - "
+			// + medicamentoReferencia.getNomeMedicamento());
+			// }
+
+			System.out.println("Referência: " + medicamentoReferencia.getNomeMedicamento() + " - "
+					+ medicamentoReferencia.getFormaFarmaceutica() + " - " + medicamentoReferencia.getConcentracao());
+			System.out.println("Laboratório: " + medicamentoReferencia.getDetentorRegistro());
+			System.out.println("Genéricos: ");
+			for (Generico generico : medicamentoReferencia.getGenericos()) {
+				System.out.println("\t" + generico.getPrincipioAtivo() + " - " + generico.getFormaFarmaceutica() + " - "
+						+ generico.getConcentracao() + " - " + " - Laboratório: " + generico.getDetentorRegistro());
+			}
+			System.out.println("Similares: ");
+			for (Similar similar : medicamentoReferencia.getSimilares()) {
+				System.out.println("\t" + similar.getNomeComercial() + " - " + similar.getFormaFarmaceutica() + " - "
+						+ similar.getConcentracao() + " - " + " - Laboratório: " + similar.getDetentorRegistro());
+			}
+			System.out.println("#######################################");
+		}
+	}
+
+	private static void agruparMedicamentos(List<MedicamentoReferencia> medicamentosReferencia,
+			List<Generico> genericos, List<Similar> similares) {
 		for (MedicamentoReferencia medicamentoReferencia : medicamentosReferencia) {
 			for (Generico generico : genericos) {
 				if (generico.getMedicamentoReferencia().equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento())) {
@@ -61,40 +77,102 @@ public class MainMedicamentos {
 				}
 			}
 		}
+	}
 
-		// System.out.println("Sucesso " + count);
-		// System.out.println("Erro " + countErro);
-		Set<String> formasFarmaceuticas = new HashSet<String>();
-		Set<String> meds = new HashSet<String>();
+	private static void mapearFormasFarmaceuticas(List<MedicamentoReferencia> medicamentosReferencia,
+			List<Generico> genericos) {
+		Map<String, String> formas = new HashMap<String, String>();
+		Set<String> formasReferencia = new HashSet<String>();
+		Set<String> formasGenericas = new HashSet<String>();
+		
+		for (MedicamentoReferencia referencia : medicamentosReferencia) {
+			String formaFarmaceutica = referencia.getFormaFarmaceutica();
+			if(formaFarmaceutica.isEmpty() || formaFarmaceutica.equals("\"\"")){
+				continue;
+			}
+			
+			if(formaFarmaceutica.startsWith("\"")){
+				formaFarmaceutica = formaFarmaceutica.substring(1);
+			}
+			if(formaFarmaceutica.endsWith("\"")){
+				formaFarmaceutica = formaFarmaceutica.substring(0, formaFarmaceutica.length() - 2);
+			}
+			formasReferencia.add(formaFarmaceutica);
+		}
+		
+		for (Generico generico : genericos) {
+			String formaFarmaceutica = generico.getFormaFarmaceutica();
+			if(formaFarmaceutica.isEmpty() || formaFarmaceutica.equals("\"\"")){
+				continue;
+			}
+			
+			if(formaFarmaceutica.startsWith("\"")){
+				formaFarmaceutica = formaFarmaceutica.substring(1);
+			}
+			if(formaFarmaceutica.endsWith("\"")){
+				formaFarmaceutica = formaFarmaceutica.substring(0, formaFarmaceutica.length() - 1);
+			}
+			
+			formaFarmaceutica = formaFarmaceutica.replaceAll("á", "a");
+			
+			formasGenericas.add(formaFarmaceutica);
+		}
+
+		List<String> listaFormasReferencia = new ArrayList<String>(formasReferencia);
+		List<String> listaFormasGenericas = new ArrayList<String>(formasGenericas);
+		
+		Collections.sort(listaFormasReferencia);
+		Collections.sort(listaFormasGenericas);
+		
+		for (int i = 0; i < listaFormasReferencia.size(); i++) {
+			System.out.print(listaFormasReferencia.get(i) + ": ");
+			
+			if(i < listaFormasGenericas.size()){
+				System.out.println(listaFormasGenericas.get(i));
+			}
+			else{
+				System.out.println();
+			}
+		}
+		
+		
 		for (MedicamentoReferencia medicamentoReferencia : medicamentosReferencia) {
+			for (Generico generico : genericos) {
+				if (generico.getMedicamentoReferencia().equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento())) {
+					String formaReferencia = medicamentoReferencia.getFormaFarmaceutica();
+					String formaGenerico = generico.getFormaFarmaceutica();
 
-			// if
-			// (!formasFarmaceuticas.contains(medicamentoReferencia.getFormaFarmaceutica()))
-			// {
-			// formasFarmaceuticas.add(medicamentoReferencia.getFormaFarmaceutica());
-			// meds.add(medicamentoReferencia.getFormaFarmaceutica() + " - "
-			// + medicamentoReferencia.getNomeMedicamento());
-			// }
+					if (formaReferencia.split(" ").length == 1) {
+						if (formaReferencia.startsWith(formaGenerico.substring(0, 1))) {
+							if (!formas.containsKey(formaReferencia)) {
+								formas.put(formaReferencia, formaGenerico);
+							}
+						}
+					} else if (formaReferencia.split(" ").length == formaGenerico.split(" ").length) {
+						String[] splReferencia = formaReferencia.toLowerCase().split(" ");
+						String[] splGenerico = formaGenerico.toLowerCase().split(" ");
+						
+						boolean igual = false;
+						for (int i = 0; i < splReferencia.length; i++) {
+							igual = splReferencia[i].startsWith(splGenerico[i].substring(0, 1));
+							if(!igual){
+								break;
+							}
+						}
 
-			System.out.println("Referência: " + medicamentoReferencia.getNomeMedicamento() + " - "
-					+ medicamentoReferencia.getFormaFarmaceutica());
-			System.out.println("Laboratório: " + medicamentoReferencia.getDetentorRegistro());
-			System.out.println("Genéricos: ");
-			for (Generico generico : medicamentoReferencia.getGenericos()) {
-				System.out.println("\t" + generico.getPrincipioAtivo() + " - " + generico.getFormaFarmaceutica() + " - " + generico.getConcentracao() + " - "
-						+ " - Laboratório: " + generico.getDetentorRegistro());
+						if (igual && !formas.containsKey(formaReferencia)) {
+							formas.put(formaReferencia, formaGenerico);
+						}
+					}
+				}
 			}
-			System.out.println("Similares: ");
-			for (Similar similar : medicamentoReferencia.getSimilares()) {
-				System.out.println("\t" + similar.getNomeComercial() + " - " + similar.getFormaFarmaceutica() + " - " + similar.getConcentracao() + " - "
-						+ " - Laboratório: " + similar.getDetentorRegistro());
-			}
-			System.out.println("#######################################");
 		}
 
-		for (String string : meds) {
-			System.out.println(string);
-		}
+//		for (String k : formas.keySet()) {
+//			System.out.println(k + ": " + formas.get(k));
+//		}
+//
+//		System.out.println(formas.size());
 	}
 
 	private static List<Generico> carregarGenericos() throws IOException {
