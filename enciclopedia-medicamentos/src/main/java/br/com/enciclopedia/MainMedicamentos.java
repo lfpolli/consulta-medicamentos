@@ -36,54 +36,78 @@ public class MainMedicamentos {
         List<Generico> genericos = carregarGenericos();
         List<Similar> similares = carregarSimilares();
 
-        mapearFormasFarmaceuticas(medicamentosReferencia, genericos);
+        // mapearFormasFarmaceuticas(medicamentosReferencia, genericos);
         agruparMedicamentos(medicamentosReferencia, genericos, similares);
-        // imprimirResultado(medicamentosReferencia);
+        imprimirResultado(medicamentosReferencia);
 
     }
 
     private static void imprimirResultado(List<MedicamentoReferencia> medicamentosReferencia) {
+        int countGenericos = 0;
         for (MedicamentoReferencia medicamentoReferencia : medicamentosReferencia) {
-
-            // if
-            // (!formasFarmaceuticas.contains(medicamentoReferencia.getFormaFarmaceutica()))
-            // {
-            // formasFarmaceuticas.add(medicamentoReferencia.getFormaFarmaceutica());
-            // meds.add(medicamentoReferencia.getFormaFarmaceutica() + " - "
-            // + medicamentoReferencia.getNomeMedicamento());
-            // }
-
-            System.out.println("Refer�ncia: " + medicamentoReferencia.getNomeMedicamento() + " - "
-                    + medicamentoReferencia.getFormaFarmaceutica() + " - " + medicamentoReferencia.getConcentracao());
-            System.out.println("Laborat�rio: " + medicamentoReferencia.getDetentorRegistro());
-            System.out.println("Gen�ricos: ");
+            System.out.println("Referencia: " + medicamentoReferencia.toString());
+            System.out.println("Genericos: ");
+            countGenericos += medicamentoReferencia.getGenericos().size();
             for (Generico generico : medicamentoReferencia.getGenericos()) {
-                System.out.println("\t" + generico.getPrincipioAtivo() + " - " + generico.getFormaFarmaceutica() + " - "
-                        + generico.getConcentracao() + " - " + " - Laborat�rio: " + generico.getDetentorRegistro());
+                System.out.println("\t" + generico.toString());
             }
             System.out.println("Similares: ");
             for (Similar similar : medicamentoReferencia.getSimilares()) {
-                System.out.println("\t" + similar.getNomeComercial() + " - " + similar.getFormaFarmaceutica() + " - "
-                        + similar.getConcentracao() + " - " + " - Laborat�rio: " + similar.getDetentorRegistro());
+                System.out.println("\t" + similar.toString());
             }
             System.out.println("#######################################");
         }
+        System.out.println("Genericos " + countGenericos);
     }
 
     private static void agruparMedicamentos(List<MedicamentoReferencia> medicamentosReferencia,
             List<Generico> genericos, List<Similar> similares) {
+        List<Generico> genericosSemReferencia = new ArrayList<Generico>(genericos);
         for (MedicamentoReferencia medicamentoReferencia : medicamentosReferencia) {
-            for (Generico generico : genericos) {
-                if (generico.getMedicamentoReferencia().equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento())) {
+            boolean referenciaIgual = false;
+            boolean concentracaoIgual = false;
+            List<Generico> genericosDoReferencia = listarGenericosPorReferencia(medicamentoReferencia.getNomeMedicamento(),
+                    genericos);
+            for (Generico generico : genericosDoReferencia) {
+                concentracaoIgual = generico.getConcentracao().replace(" ", "")
+                        .equalsIgnoreCase(medicamentoReferencia.getConcentracao().replace(" ", ""));
+
+                if (concentracaoIgual) {
                     medicamentoReferencia.getGenericos().add(generico);
+                    genericosSemReferencia.remove(generico);
+                }
+                else {
+                    // System.out.println("Erro");
+                    // System.out.println("R");
+                    // System.out.println("Erro");
                 }
             }
             for (Similar similar : similares) {
-                if (similar.getMedicamentoReferencia().equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento())) {
+                referenciaIgual = similar.getMedicamentoReferencia().replace(" ", "")
+                        .equalsIgnoreCase(medicamentoReferencia.getNomeMedicamento().replace(" ", ""));
+                concentracaoIgual = similar.getConcentracao().replace(" ", "")
+                        .equalsIgnoreCase(medicamentoReferencia.getConcentracao().replace(" ", ""));
+
+                if (referenciaIgual && concentracaoIgual) {
                     medicamentoReferencia.getSimilares().add(similar);
                 }
             }
         }
+
+        System.out.println("Genericos sem referência: " + genericosSemReferencia.size());
+    }
+
+    private static List<Generico> listarGenericosPorReferencia(String referencia, List<Generico> genericos) {
+        List<Generico> result = new ArrayList<Generico>();
+
+        referencia = referencia.replace(" ", "");
+        for (Generico generico : genericos) {
+            if (referencia.equalsIgnoreCase(generico.getMedicamentoReferencia().replace(" ", ""))) {
+                result.add(generico);
+            }
+        }
+
+        return result;
     }
 
     private static void mapearFormasFarmaceuticas(List<MedicamentoReferencia> medicamentosReferencia,
@@ -113,13 +137,7 @@ public class MainMedicamentos {
                 continue;
             }
 
-            if (formaFarmaceutica.startsWith("\"")) {
-                formaFarmaceutica = formaFarmaceutica.substring(1);
-            }
-            if (formaFarmaceutica.endsWith("\"")) {
-                formaFarmaceutica = formaFarmaceutica.substring(0, formaFarmaceutica.length() - 1);
-            }
-
+            formaFarmaceutica = formaFarmaceutica.replaceAll("\"", "");
             formaFarmaceutica = formaFarmaceutica.replaceAll("á", "a");
 
             formasGenericas.add(formaFarmaceutica);
@@ -215,13 +233,39 @@ public class MainMedicamentos {
             generico.setPrincipioAtivo(splited[0].trim());
             generico.setMedicamentoReferencia(splited[1].trim());
             generico.setFormaFarmaceutica(splited[2].trim());
-            generico.setConcentracao(splited[3].trim());
+            String concentracao = splited[3].trim();
+            generico.setConcentracao(concentracao);
             generico.setDetentorRegistro(splited[4].trim());
             generico.setDataPublicacaoRegistro(splited[5].trim());
 
             genericos.add(generico);
+
+            if (concentracao.split(";").length > 1) {
+                String[] cs = concentracao.split(";");
+                generico.setConcentracao(cs[0]);
+
+                for (int i = 1; i < cs.length; i++) {
+                    Generico gene = new Generico();
+                    gene.setPrincipioAtivo(splited[0].trim());
+                    gene.setMedicamentoReferencia(splited[1].trim());
+                    gene.setFormaFarmaceutica(splited[2].trim());
+                    gene.setConcentracao(cs[i].trim());
+                    gene.setDetentorRegistro(splited[4].trim());
+                    gene.setDataPublicacaoRegistro(splited[5].trim());
+
+                    genericos.add(gene);
+                }
+
+                // System.out.println(generico.getDetentorRegistro() + " - " + generico.getFormaFarmaceutica() + " - "
+                // + generico.getConcentracao());
+            }
+
         }
         return genericos;
+    }
+
+    private static String removerAspas(String str) {
+        return str.replaceAll("\"", "");
     }
 
     private static List<MedicamentoReferencia> carregarMedicamentosReferencia() throws IOException {
@@ -236,6 +280,9 @@ public class MainMedicamentos {
 
         for (String string : fixedLines) {
             string = string.replace("\n", "");
+            if (string.isEmpty()) {
+                continue;
+            }
             referencia = new MedicamentoReferencia();
             String[] splited = string.split("\t");
             referencia.setPrincipioAtivo(splited[0].trim());
@@ -281,6 +328,7 @@ public class MainMedicamentos {
         String part = "";
 
         for (String string : allLines) {
+            string = removerAspas(string);
             part += string.replace("\n", "");
 
             if (part.split(separador).length == numberOfParts) {
